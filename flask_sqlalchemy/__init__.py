@@ -1029,8 +1029,8 @@ class SQLAlchemy(object):
         return [self.Model] + self.external_bases
 
     def register_base(self, Base):
-        """Register an external raw SQLAlchemy declarative base. 
-        Allows usage of the base with our session management and 
+        """Register an external raw SQLAlchemy declarative base.
+        Allows usage of the base with our session management and
         adds convenience query property using self.Query by default."""
 
         self.external_bases.append(Base)

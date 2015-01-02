@@ -955,3 +955,12 @@ class SQLAlchemy(object):
             self.__class__.__name__,
             app and app.config['SQLALCHEMY_DATABASE_URI'] or None
         )
+
+    def register_base(self, Base):
+        """
+        Allow registration of raw SQLAlchemy model classes.
+        """
+        self.Model = Base
+        for c in Base._decl_class_registry.values():
+            # Add the query class to each of the models.
+            c.query = self.session.query_property()

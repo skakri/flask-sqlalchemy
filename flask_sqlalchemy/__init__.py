@@ -963,4 +963,6 @@ class SQLAlchemy(object):
         self.Model = Base
         for c in Base._decl_class_registry.values():
             # Add the query class to each of the models.
-            c.query = self.session.query_property()
+            c.query_class = BaseQuery
+            c.query = _QueryProperty(self)
+

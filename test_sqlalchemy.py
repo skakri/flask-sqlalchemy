@@ -590,6 +590,95 @@ class StandardSessionTestCase(unittest.TestCase):
         assert session.query(QazWsx).first() is None
 
 
+class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
+
+    def sqla_raw_declarative_base(self):
+        from sqlalchemy.ext.declarative import declarative_base
+        from sqlalchemy import Column, String, Integer, ForeignKey
+        from sqlalchemy.orm import relationship
+
+        Base = declarative_base()
+
+        class Foo(Base):
+            __tablename__ = 'foo'
+            id = Column(Integer, primary_key=True)
+            string = Column(String(255))
+            children = relationship("Bar", lazy='dynamic')
+
+
+        class Bar(Base):
+            __tablename__ = 'bar'
+            id = Column(Integer, primary_key=True)
+            parent_id = Column(Integer, ForeignKey('foo.id'))
+
+
+        return Base, Foo, Bar
+
+    def setUp(self):
+        app = flask.Flask(__name__)
+        app.config['SQLALCHEMY_ENGINE'] = 'sqlite://'
+        app.config['TESTING'] = True
+        db = sqlalchemy.SQLAlchemy(app)
+        
+        self.Base, self.Foo, self.Bar = self.sqla_raw_declarative_base()
+        db.register_base(self.Base)
+        db.create_all()
+
+        self.db = db
+        self.app = app
+        
+    def tearDown(self):
+        self.db.drop_all()
+
+
+    def test_register_base_success(self):
+
+        self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo'))
+        self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'faketable'))
+
+        
+    def test_query_insert(self):
+
+        self.assertEqual(len(self.Foo.query.all()), 0)
+
+        foo = self.Foo(string='Foo')
+
+        self.db.session.add(foo)
+        self.db.session.commit()
+
+        self.assertEqual(len(self.db.session.query(self.Foo).all()), 1)
+        self.assertEqual(self.db.session.query(self.Foo).count(), 1)
+
+        first_foo = self.db.session.query(self.Foo).first()
+        self.assertEqual(first_foo.string, 'Foo')
+
+    def test_query_property(self):
+            
+        self.assertEqual(len(self.Foo.query.all()), 0)
+        foo = self.Foo(string='Foo')
+
+        self.db.session.add(foo)
+        self.db.session.commit()
+
+        self.assertEqual(len(self.Foo.query.all()), 1)
+        self.assertEqual(self.Foo.query.count(), 1)
+
+        first_foo = self.Foo.query.first()
+        self.assertEqual(first_foo.string, 'Foo')
+        
+
+    def test_default_query_class(self):
+        # Also test children.
+        p = self.Foo()
+        c = self.Bar()
+        c.parent = p
+
+        self.assertEqual(type(self.Foo.query), sqlalchemy.BaseQuery)
+        self.assertEqual(type(self.Bar.query), sqlalchemy.BaseQuery)
+        self.assertTrue(isinstance(p.children, sqlalchemy.BaseQuery))
+
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(BasicAppTestCase))
@@ -602,6 +691,7 @@ def suite():
     suite.addTest(unittest.makeSuite(RegressionTestCase))
     suite.addTest(unittest.makeSuite(SessionScopingTestCase))
     suite.addTest(unittest.makeSuite(CommitOnTeardownTestCase))
+    suite.addTest(unittest.makeSuite(RawSQLADeclarativeBaseTestCase))
     if flask.signals_available:
         suite.addTest(unittest.makeSuite(SignallingTestCase))
     suite.addTest(unittest.makeSuite(StandardSessionTestCase))

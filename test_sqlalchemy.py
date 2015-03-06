@@ -790,8 +790,8 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
 
     def test_register_base_success(self):
         for suffix in self.model_suffixes:
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{}'.format(suffix)))
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
 
         self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'faketable'))
 
@@ -800,7 +800,7 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
         for suffix in self.model_suffixes:
             self.assertEqual(len(self.db.session.query(self.Models[suffix]['Foo']).all()), 0)
 
-            foo = self.Models[suffix]['Foo'](string='Foo_{}'.format(suffix))
+            foo = self.Models[suffix]['Foo'](string='Foo_{0}'.format(suffix))
             self.db.session.add(foo)
             self.db.session.commit()
 
@@ -808,7 +808,7 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
             self.assertEqual(self.db.session.query(self.Models[suffix]['Foo']).count(), 1)
 
             first_foo = self.db.session.query(self.Models[suffix]['Foo']).first()
-            self.assertEqual(first_foo.string, 'Foo_{}'.format(suffix))
+            self.assertEqual(first_foo.string, 'Foo_{0}'.format(suffix))
 
 
     def test_query_property(self):
@@ -847,13 +847,13 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
     def test_drop_all(self):
         # Make sure they exist before drop, so we can compare the result.
         for suffix in self.model_suffixes:
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{}'.format(suffix)))
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
 
         self.db.drop_all()
         for suffix in self.model_suffixes:
-            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{}'.format(suffix)))
-            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{}'.format(suffix)))
+            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
+            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
 
  
 

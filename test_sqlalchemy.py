@@ -634,19 +634,26 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
 
     def test_register_base_success(self):
 
-        self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo'))
-        self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar'))
-        self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'faketable'))
+        self.assertTrue(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'foo'))
+        self.assertTrue(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'bar'))
+        self.assertFalse(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'faketable'))
 
     def test_drop_all(self):
         # Make sure the tables were originally created so we can compare
         # the fact that they have been dropped.
-        self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo'))
-        self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar'))
+        self.assertTrue(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'foo'))
+        self.assertTrue(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'bar'))
 
         self.db.drop_all()
-        self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo'))
-        self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar'))
+        self.assertFalse(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'foo'))
+        self.assertFalse(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 'bar'))
 
         
     def test_query_insert(self):
@@ -790,24 +797,34 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
 
     def test_register_base_success(self):
         for suffix in self.model_suffixes:
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 
+                'foo_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 
+                'bar_{0}'.format(suffix)))
 
-        self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'faketable'))
+        self.assertFalse(self.db.engine.dialect.has_table(
+            self.db.engine.connect(), 
+            'faketable'))
 
         
     def test_query_insert(self):
         for suffix in self.model_suffixes:
-            self.assertEqual(len(self.db.session.query(self.Models[suffix]['Foo']).all()), 0)
+            self.assertEqual(len(self.db.session.query(
+                self.Models[suffix]['Foo']).all()), 0)
 
             foo = self.Models[suffix]['Foo'](string='Foo_{0}'.format(suffix))
             self.db.session.add(foo)
             self.db.session.commit()
 
-            self.assertEqual(len(self.db.session.query(self.Models[suffix]['Foo']).all()), 1)
-            self.assertEqual(self.db.session.query(self.Models[suffix]['Foo']).count(), 1)
+            self.assertEqual(len(self.db.session.query(
+                self.Models[suffix]['Foo']).all()), 1)
+            self.assertEqual(self.db.session.query(
+                self.Models[suffix]['Foo']).count(), 1)
 
-            first_foo = self.db.session.query(self.Models[suffix]['Foo']).first()
+            first_foo = self.db.session.query(
+                self.Models[suffix]['Foo']).first()
             self.assertEqual(first_foo.string, 'Foo_{0}'.format(suffix))
 
 
@@ -833,8 +850,12 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
             c = self.Models[suffix]['Bar']()
             c.parent = p
 
-            self.assertEqual(type(self.Models[suffix]['Foo'].query), sqlalchemy.BaseQuery)
-            self.assertEqual(type(self.Models[suffix]['Bar'].query), sqlalchemy.BaseQuery)
+            self.assertEqual(
+                type(self.Models[suffix]['Foo'].query), 
+                sqlalchemy.BaseQuery)
+            self.assertEqual(
+                type(self.Models[suffix]['Bar'].query), 
+                sqlalchemy.BaseQuery)
 
             # Unable to override SQLA's relationship constructor to use our 
             # own query class for relationships, since we cannot inspect the 
@@ -847,13 +868,17 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
     def test_drop_all(self):
         # Make sure they exist before drop, so we can compare the result.
         for suffix in self.model_suffixes:
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
-            self.assertTrue(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 'foo_{0}'.format(suffix)))
+            self.assertTrue(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 'bar_{0}'.format(suffix)))
 
         self.db.drop_all()
         for suffix in self.model_suffixes:
-            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'foo_{0}'.format(suffix)))
-            self.assertFalse(self.db.engine.dialect.has_table(self.db.engine.connect(), 'bar_{0}'.format(suffix)))
+            self.assertFalse(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 'foo_{0}'.format(suffix)))
+            self.assertFalse(self.db.engine.dialect.has_table(
+                self.db.engine.connect(), 'bar_{0}'.format(suffix)))
 
  
 

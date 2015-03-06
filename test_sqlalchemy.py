@@ -764,14 +764,14 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
         app.config['TESTING'] = True
         self.Base, self.Foo, self.Bar = self.sqla_raw_declarative_base()
         db = fsa.SQLAlchemy(app)
-        
-        
+
+
         db.register_base(self.Base)
         db.create_all()
 
         self.db = db
         self.app = app
-        
+
     def tearDown(self):
         self.db.drop_all()
 
@@ -799,7 +799,7 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
         self.assertFalse(self.db.engine.dialect.has_table(
             self.db.engine.connect(), 'bar'))
 
-        
+
     def test_query_insert(self):
 
         self.assertEqual(len(self.Foo.query.all()), 0)
@@ -816,7 +816,7 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
         self.assertEqual(first_foo.string, 'Foo')
 
     def test_query_property(self):
-            
+
         self.assertEqual(len(self.Foo.query.all()), 0)
         foo = self.Foo(string='Foo')
 
@@ -828,7 +828,7 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
 
         first_foo = self.Foo.query.first()
         self.assertEqual(first_foo.string, 'Foo')
-        
+
 
     def test_default_query_class(self):
         # Also test children.
@@ -839,8 +839,8 @@ class RawSQLADeclarativeBaseTestCase(unittest.TestCase):
         self.assertEqual(type(self.Foo.query), fsa.BaseQuery)
         self.assertEqual(type(self.Bar.query), fsa.BaseQuery)
 
-        # Unable to override SQLA's relationship constructor to use our 
-        # own query class for relationships, since we cannot inspect the 
+        # Unable to override SQLA's relationship constructor to use our
+        # own query class for relationships, since we cannot inspect the
         # relationship. If we can get enough info about how the original
         # relationship property was constructed, we could reconstruct using
         # a wrapped relationship property. Disabling this test for now.
@@ -915,8 +915,8 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
             Bar=Bar_C,
             Base=Base_C
         )
-        
-        
+
+
         return models
 
     def setUp(self):
@@ -927,7 +927,7 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
 
         self.Models = self.sqla_raw_declarative_base()
         db = fsa.SQLAlchemy(app)
-        
+
         for base_group in self.Models.values():
             db.register_base(base_group['Base'])
         db.create_all()
@@ -935,24 +935,24 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
         self.db = db
         self.app = app
 
-        
+
     def tearDown(self):
         self.db.drop_all()
 
     def test_register_base_success(self):
         for suffix in self.model_suffixes:
             self.assertTrue(self.db.engine.dialect.has_table(
-                self.db.engine.connect(), 
+                self.db.engine.connect(),
                 'foo_{0}'.format(suffix)))
             self.assertTrue(self.db.engine.dialect.has_table(
-                self.db.engine.connect(), 
+                self.db.engine.connect(),
                 'bar_{0}'.format(suffix)))
 
         self.assertFalse(self.db.engine.dialect.has_table(
-            self.db.engine.connect(), 
+            self.db.engine.connect(),
             'faketable'))
 
-        
+
     def test_query_insert(self):
         for suffix in self.model_suffixes:
             self.assertEqual(len(self.db.session.query(
@@ -985,7 +985,7 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
 
             first_foo = self.Models[suffix]['Foo'].query.first()
             self.assertEqual(first_foo.string, 'Foo')
-        
+
 
     def test_default_query_class(self):
         # Also test children.
@@ -995,14 +995,14 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
             c.parent = p
 
             self.assertEqual(
-                type(self.Models[suffix]['Foo'].query), 
+                type(self.Models[suffix]['Foo'].query),
                 fsa.BaseQuery)
             self.assertEqual(
-                type(self.Models[suffix]['Bar'].query), 
+                type(self.Models[suffix]['Bar'].query),
                 fsa.BaseQuery)
 
-            # Unable to override SQLA's relationship constructor to use our 
-            # own query class for relationships, since we cannot inspect the 
+            # Unable to override SQLA's relationship constructor to use our
+            # own query class for relationships, since we cannot inspect the
             # relationship. If we can get enough info about how the original
             # relationship property was constructed, we could reconstruct using
             # a wrapped relationship property. Disabling this test for now.

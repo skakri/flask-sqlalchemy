@@ -1011,10 +1011,11 @@ class SQLAlchemy(object):
         """
         self.external_bases.append(Base)
         for c in Base._decl_class_registry.values():
-            if not hasattr(c, 'query') and not hasattr(c, 'query_class'):
-                c.query_class = BaseQuery
+            if isinstance(c, type):
+                if not hasattr(c, 'query') and not hasattr(c, 'query_class'):
+                    c.query_class = BaseQuery
 
-            if not hasattr(c, 'query'):
-                c.query = _QueryProperty(self)
+                if not hasattr(c, 'query'):
+                    c.query = _QueryProperty(self)
 
 

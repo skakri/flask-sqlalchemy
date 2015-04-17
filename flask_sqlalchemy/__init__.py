@@ -18,7 +18,7 @@ import warnings
 import sqlalchemy
 from math import ceil
 from functools import partial
-from flask import _request_ctx_stack, abort
+from flask import _request_ctx_stack, abort, has_request_context, request
 from flask.signals import Namespace
 from operator import itemgetter
 from threading import Lock
@@ -27,7 +27,7 @@ from sqlalchemy.orm.exc import UnmappedClassError
 from sqlalchemy.orm.session import Session as SessionBase
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-from flask.ext.sqlalchemy._compat import iteritems, itervalues, xrange, \
+from flask_sqlalchemy._compat import iteritems, itervalues, xrange, \
      string_types
 
 # the best timer function for the platform
@@ -426,16 +426,50 @@ class BaseQuery(orm.Query):
             abort(404)
         return rv
 
-    def paginate(self, page, per_page=20, error_out=True):
+    def paginate(self, page=None, per_page=None, error_out=True):
         """Returns `per_page` items from page `page`.  By default it will
         abort with 404 if no items were found and the page was larger than
         1.  This behavor can be disabled by setting `error_out` to `False`.
 
+        If page or per_page are None, they will be retrieved from the
+        request query.  If the values are not ints and ``error_out`` is
+        true, it will abort with 404.  If there is no request or they
+        aren't in the query, they default to page 1 and 20
+        respectively.
+
         Returns an :class:`Pagination` object.
         """
+
+        if has_request_context():
+            if page is None:
+                try:
+                    page = int(request.args.get('page', 1))
+                except (TypeError, ValueError):
+                    if error_out:
+                        abort(404)
+
+                    page = 1
+
+            if per_page is None:
+                try:
+                    per_page = int(request.args.get('per_page', 20))
+                except (TypeError, ValueError):
+                    if error_out:
+                        abort(404)
+
+                    per_page = 20
+        else:
+            if page is None:
+                page = 1
+
+            if per_page is None:
+                per_page = 20
+
         if error_out and page < 1:
             abort(404)
+
         items = self.limit(per_page).offset((page - 1) * per_page).all()
+
         if not items and page != 1 and error_out:
             abort(404)
 
@@ -685,17 +719,22 @@ class SQLAlchemy(object):
     .. versionadded:: 0.16
        `scopefunc` is now accepted on `session_options`. It allows specifying
         a custom function which will define the SQLAlchemy session's scoping.
+
+    .. versionadded:: 2.1
+       The `metadata` parameter was added. This allows for setting custom
+       naming conventions among other, non-trivial things.
     """
 
-    def __init__(self, app=None, use_native_unicode=True, session_options=None):
+    def __init__(self, app=None, use_native_unicode=True, session_options=None, metadata=None):
+
         if session_options is None:
             session_options = {}
 
         session_options.setdefault('scopefunc', connection_stack.__ident_func__)
         self.use_native_unicode = use_native_unicode
         self.session = self.create_scoped_session(session_options)
+        self.Model = self.make_declarative_base(metadata)
         self.Query = BaseQuery
-        self.Model = self.make_declarative_base()
         self._engine_lock = Lock()
         self.app = app
         _include_sqlalchemy(self)
@@ -729,9 +768,10 @@ class SQLAlchemy(object):
         """
         return SignallingSession(self, **options)
 
-    def make_declarative_base(self):
+    def make_declarative_base(self, metadata=None):
         """Creates the declarative base."""
         base = declarative_base(cls=Model, name='Model',
+                                metadata=metadata,
                                 metaclass=_BoundDeclarativeMeta)
         base.query = _QueryProperty(self)
         return base

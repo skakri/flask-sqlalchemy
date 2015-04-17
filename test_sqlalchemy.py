@@ -5,6 +5,7 @@ import unittest
 from datetime import datetime
 import flask
 import flask_sqlalchemy as sqlalchemy
+from sqlalchemy import MetaData
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import sessionmaker
 
@@ -79,6 +80,63 @@ class BasicAppTestCase(unittest.TestCase):
 
     def test_helper_api(self):
         self.assertEqual(self.db.metadata, self.db.Model.metadata)
+
+
+class CustomMetaDataTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.app = flask.Flask(__name__)
+        self.app.config['SQLALCHEMY_ENGINE'] = 'sqlite://'
+        self.app.config['TESTING'] = True
+
+    def test_custom_metadata_positive(self):
+
+        convention = {
+            "ix": 'ix_%(column_0_label)s',
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s"
+        }
+
+        metadata = MetaData(naming_convention=convention)
+        db = sqlalchemy.SQLAlchemy(self.app, metadata=metadata)
+        self.db = db
+
+        class One(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            myindex = db.Column(db.Integer, index=True)
+
+        class Two(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            one_id = db.Column(db.Integer, db.ForeignKey(One.id))
+            myunique = db.Column(db.Integer, unique=True)
+
+        self.assertEqual(list(One.__table__.constraints)[0].name, 'pk_one')
+        self.assertEqual(list(One.__table__.indexes)[0].name, 'ix_one_myindex')
+
+        self.assertTrue('fk_two_one_id_one' in [c.name for c in Two.__table__.constraints])
+        self.assertTrue('uq_two_myunique' in [c.name for c in Two.__table__.constraints])
+        self.assertTrue('pk_two' in [c.name for c in Two.__table__.constraints])
+
+    def test_custom_metadata_negative(self):
+        db = sqlalchemy.SQLAlchemy(self.app, metadata=None)
+        self.db = db
+
+        class One(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            myindex = db.Column(db.Integer, index=True)
+
+        class Two(db.Model):
+            id = db.Column(db.Integer, primary_key=True)
+            one_id = db.Column(db.Integer, db.ForeignKey(One.id))
+            myunique = db.Column(db.Integer, unique=True)
+
+        self.assertNotEqual(list(One.__table__.constraints)[0].name, 'pk_one')
+
+        self.assertFalse('fk_two_one_id_one' in [c.name for c in Two.__table__.constraints])
+        self.assertFalse('uq_two_myunique' in [c.name for c in Two.__table__.constraints])
+        self.assertFalse('pk_two' in [c.name for c in Two.__table__.constraints])
 
 
 class TestQueryProperty(unittest.TestCase):
@@ -294,6 +352,34 @@ class PaginationTestCase(unittest.TestCase):
         p = sqlalchemy.Pagination(None, 1, 0, 500, [])
         self.assertEqual(p.pages, 0)
 
+    def test_query_paginate(self):
+        app = flask.Flask(__name__)
+        db = sqlalchemy.SQLAlchemy(app)
+        Todo = make_todo_model(db)
+        db.create_all()
+
+        with app.app_context():
+            db.session.add_all([Todo('', '') for _ in range(100)])
+            db.session.commit()
+
+        @app.route('/')
+        def index():
+            p = Todo.query.paginate()
+            return '{0} items retrieved'.format(len(p.items))
+
+        c = app.test_client()
+        # request default
+        r = c.get('/')
+        self.assertEqual(r.status_code, 200)
+        # request args
+        r = c.get('/?per_page=10')
+        self.assertEqual(r.data.decode('utf8'), '10 items retrieved')
+
+        with app.app_context():
+            # query default
+            p = Todo.query.paginate()
+            self.assertEqual(p.total, 100)
+
 
 class BindsTestCase(unittest.TestCase):
 
@@ -405,7 +491,7 @@ class SQLAlchemyIncludesTestCase(unittest.TestCase):
         self.assertTrue(db.Column == sqlalchemy_lib.Column)
 
         # The Query object we expose is actually our own subclass.
-        from flask.ext.sqlalchemy import BaseQuery
+        from flask_sqlalchemy import BaseQuery
         self.assertTrue(db.Query == BaseQuery)
 
 
@@ -885,6 +971,7 @@ class RawSQLAMultipleDeclarativeBaseTestCase(unittest.TestCase):
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(BasicAppTestCase))
+    suite.addTest(unittest.makeSuite(CustomMetaDataTestCase))
     suite.addTest(unittest.makeSuite(TestQueryProperty))
     suite.addTest(unittest.makeSuite(TablenameTestCase))
     suite.addTest(unittest.makeSuite(PaginationTestCase))
